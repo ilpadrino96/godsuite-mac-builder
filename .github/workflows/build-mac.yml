@@ -1,0 +1,64 @@
+name: Build Mac Client (Free Unlimited Runner)
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [trigger-mac-build]
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout Private GodSuite Repository
+      uses: actions/checkout@v4
+      with:
+        repository: 'ilpadrino96/GodSuite'
+        token: ${{ secrets.GH_PAT }}
+        ref: 'main'
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install Desktop Client Dependencies
+      run: |
+        cd .dev_source/apps/desktop-client
+        npm install
+
+    - name: Build macOS Application
+      run: |
+        cd .dev_source/apps/desktop-client
+        npm run build
+        npm run dist
+
+    - name: Deploy macOS DMG to VPS
+      if: env.VPS_SSH_KEY != ''
+      env:
+        VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+      run: |
+        mkdir -p ~/.ssh
+        echo "$VPS_SSH_KEY" > ~/.ssh/vps_key
+        chmod 600 ~/.ssh/vps_key
+        
+        DMG_FILE=$(find .dev_source/apps/desktop-client/release-builds -name "*x64*.dmg" | head -n 1)
+        if [ -z "$DMG_FILE" ]; then
+          DMG_FILE=$(find .dev_source/apps/desktop-client/release-builds -name "*.dmg" | head -n 1)
+        fi
+
+        if [ -n "$DMG_FILE" ]; then
+          echo "Uploading $DMG_FILE to VPS..."
+          scp -o StrictHostKeyChecking=no -i ~/.ssh/vps_key "$DMG_FILE" root@187.124.174.54:/opt/godsuite/public/downloads/GodSuite-mac.dmg
+          echo "Successfully uploaded $DMG_FILE to VPS downloads!"
+        else
+          echo "No DMG file found in release-builds!"
+          exit 1
+        fi
+
+    - name: Upload Artifact as Release Asset / Job Output
+      uses: actions/upload-artifact@v4
+      with:
+        name: GodSuite-macOS-DMG
+        path: .dev_source/apps/desktop-client/release-builds/*.dmg
+        if-no-files-found: warn
