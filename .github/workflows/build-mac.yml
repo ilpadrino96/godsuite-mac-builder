@@ -49,7 +49,7 @@ jobs:
 
         if [ -n "$DMG_FILE" ]; then
           echo "Uploading $DMG_FILE to VPS..."
-          scp -o StrictHostKeyChecking=no -i ~/.ssh/vps_key "$DMG_FILE" "root@${{ secrets.VPS_HOST || '187.124.174.54' }}:/opt/godsuite/public/downloads/GodSuite-mac.dmg"
+          scp -o StrictHostKeyChecking=no -i ~/.ssh/vps_key "$DMG_FILE" "root@${{ secrets.VPS_HOST || '187.126.1.153' }}:/opt/godsuite/public/downloads/GodSuite-mac.dmg"
           echo "Successfully uploaded $DMG_FILE to VPS downloads!"
         else
           echo "No DMG file found in release-builds!"
